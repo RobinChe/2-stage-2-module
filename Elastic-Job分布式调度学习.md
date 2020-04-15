@@ -16,6 +16,8 @@ zk注册中心在定义的命名空间下，创建作业名称节点，用于区
 Elastic-Job-Lite初始化的入口是JobSchedule，应用服务器启动时，会调用JobSchedule的init方法，开启作业启动流程。首先添加或更新作业配置信息，并将配置信息持久化到zk上；接着创建quartz调度器，作业的调度执行依赖quartz技术；然后启动所有的监听器，包括leader选举监听、失效转移监听、分片监听等，并发起主节点选举，将leader节点信息set到leader/election/instance节点下；然后将服务器信息、实例信息注册到zk上，并且在leader/sharding下创建necessary节点，作为重新分片的标记；最后由quartz调度器根据cron表达式调度执行。
 
 4. 作业执行流程图：
+
+
 ![在这里插入图片描述](https://img-blog.csdnimg.cn/20200415155854434.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L215c3dlZXQxMTE=,size_16,color_FFFFFF,t_70)
 
 Elastic-Job-Lite执行器的入口是实现了Job接口的LiteJob类，当任务调度执行时，进入LiteJob类的execute方法。在这里完成一系列的操作，包括获取失效转移分片项，如果没有分配的失效转移项，则判断是否需要重新分片，然后获取分配给自己的分片项，然后判断当前分片项是否正在running，如果否，则执行任务项；如果是，则在sharding/[item]下添加misfire节点，标示该分片项错过执行，等待分片项执行结束后，再触发misfire的分片项执行。
